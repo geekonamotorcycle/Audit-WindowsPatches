@@ -2,26 +2,40 @@
 Clear-Variable Machine;
 Clear-Variable KB;
 Clear-Variable Result;
-
-#all import files should be in the same path as the script. If you dont want to import from a file, then add to the arrays
-# To import hosts from a file, remove the '#' from #[array]$MachineList = @(Get-Content -Path .\Machinelist.txt); and add it to the front of the line below it.
-[array]$MachineList = @(Get-Content -Path .\Machinelist.txt);
-#[array]$MachineList = @("HOST1","HOST2", "HOST3");
-# To import KB numbers from a file, remove the '#' from #[array]$KBList = @(Get-Content -Path .\KBList.txt); add it to the front of the line below it.
-[array]$KBList = @(Get-Content -Path .\KBList.txt);
-#[array]$KBList = @("KB4100480", "KB4465477");
-
 [int]$i = 1;
 [array]$Table = @();
 
-Clear-Host;
-Write-Host "*****************************" -ForegroundColor Green;
-Write-Host "Ad-Hoc Patch Audit tool.`nAuthor: Joshua Porrata`nVersion: 1.00`nFor instrutions, read the code.`nPress enter to continue" -ForegroundColor white;
+Clear-Host
+Write-Host "How would you like to import the Host and KB list?`n";
+Write-host "1. Import from machinelist.txt and kblist.txt in the same directory the script is in" -ForegroundColor Green;
+Write-host "2. Use the values stored in the script" -ForegroundColor Yellow;
+Write-Host "3. Default is option 1";
+$X = Read-Host -Prompt "`nEnter your choice (1 or 2): ";
+
+switch ($X) {
+    1 {
+        [array]$MachineList = @(Get-Content -Path .\Machinelist.txt);
+        [array]$KBList = @(Get-Content -Path .\KBList.txt);
+    }
+    2 {
+        [array]$MachineList = @();
+        [array]$KBList = @();
+    }
+    Default {
+        [array]$MachineList = @(Get-Content -Path .\Machinelist.txt);
+        [array]$KBList = @(Get-Content -Path .\KBList.txt);
+    }
+}
+
+
+#Clear-Host;
+Write-Host "`n*****************************" -ForegroundColor Green;
+Write-Host "Ad-Hoc Patch Audit tool.`nAuthor: Joshua Porrata`nVersion: 1.01`nFor instrutions, read the code.`nPress enter to continue" -ForegroundColor white;
 Write-Host "*****************************" -ForegroundColor Green;
 Read-Host;
 Write-Host "First I will Test-Connection with a single attempt.`nIf that Passes then I will use RPC to connect to the remote machine.`nFinally I will invoke 'Get-Hotfix' on the remote machine." -ForegroundColor white;
 
-Write-Host "`nEnsure that you have the CSV at "$env:userprofile\Desktop\KB-AuditResults.csv" closed or else this will all be for nothing`n" -ForegroundColor Yellow
+Write-Host "`nEnsure that you have the CSV at"$env:userprofile\Desktop\KB-AuditResults.csv" closed or else this will all be for nothing`n" -ForegroundColor Yellow
 
 Write-Host "There are "$MachineList.count" hosts and "$KBList.count" Patches to Check" -ForegroundColor White
 Write-Host "Get a Coffee and please be patient....`n" -ForegroundColor white;
@@ -72,8 +86,17 @@ foreach ($Machine in $MachineList) {
 
 [datetime]$End = [System.DateTime]::Now;
 $End = $End.ToString("MM-dd-yyyy-HHmm");
-$table | Export-Csv -Path "$env:userprofile\Desktop\KB-AuditResults.csv" -NoTypeInformation -Encoding UTF8;
 
-Write-Host "`nAll Done and I have stored the results in $env:userprofile\Desktop\KB-AuditResults.csv`n";
+try {
+    $table | Export-Csv -Path "$env:userprofile\Desktop\KB-AuditResults.csv" -NoTypeInformation -Encoding UTF8 -ErrorAction Stop;
+    Write-Host "`nAll Done and I have stored the results in $env:userprofile\Desktop\KB-AuditResults.csv`n";
+}
+catch [System.IO.IOException]{
+    Write-Host "`nI was not able to write the results to $env:userprofile\Desktop\KB-AuditResults.csv, There was an IO Exeption." -ForegroundColor Red
+    Write-Host "Press enter and I will Dump the results to the console where you can attempt to copy/pate them" -ForegroundColor Red
+    Read-Host
+    $Table | Format-Table
+}
+
 Write-Host "Loop Start Time $start" -ForegroundColor Green;
 Write-Host "Loop End Time $end`n" -ForegroundColor Red;
